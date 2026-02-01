@@ -28,7 +28,6 @@ class ExtratorArquivo:
                 with zipfile.ZipFile(caminho_zip, 'r') as zip:
                     print(f"Extraindo: {arquivo}")
                     zip.extractall(subpasta_extracao)
-                print(f"Conteúdo de {arquivo} extraído para {subpasta_extracao}")
             except zipfile.BadZipFile:
                 print(f"Erro: O arquivo {arquivo} está corrompido.")
             except Exception as e:

@@ -8,6 +8,7 @@ class Downloader:
         os.makedirs(self.diretorio, exist_ok=True)
 
     def baixar(self, url):
+        print(f"Tentando baixar {url}")
         if not url:
             print("URL inválida")
             return False
@@ -26,7 +27,6 @@ class Downloader:
                         if chunk: # Filtra chunks vazios
                             f.write(chunk)
             
-            print(f"Arquivo salvo com sucesso: {nome_arquivo}")
             return True
 
         except requests.exceptions.RequestException as e:

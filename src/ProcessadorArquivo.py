@@ -32,7 +32,6 @@ class ProcessadorArquivo:
             ).any(axis=1)
 
             if mask_texto.any():
-                print(f"Alvo encontrado em {len(teste[mask_texto])} linhas")
                 nome = os.path.basename(caminho)
                 dados_normalizados = self.normalizar(teste, nome)
                 self.dados_consolidados.append(dados_normalizados)
@@ -126,6 +125,7 @@ class ProcessadorArquivo:
             right_on="REGISTRO_OPERADORA", 
             how="left"
         )
+
         
         #  Criando Ano e Trimestre a partir da DATA_BASE
         df_final["DATA_BASE"] = pandas.to_datetime(df_final["DATA_BASE"], errors="coerce")

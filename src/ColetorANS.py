@@ -27,7 +27,6 @@ class ColetorANS:
             
             link_do_ano = self.requisicao_unica(link_alvo, ano)
             if link_do_ano:
-                print(f"Buscando em {ano}")
                 arquivos = self.requisicao_multipla(link_do_ano)
                 
                 for arq_link in arquivos:
@@ -47,7 +46,6 @@ class ColetorANS:
     
         try:
             request = requests.get(url, timeout= 5)
-            print(f"O status do requerimento da url {url} foi: {request.status_code}")
             request.raise_for_status()
             tradutor = BeautifulSoup(request.text, "html.parser")
             area_alvo = alvo
@@ -68,7 +66,6 @@ class ColetorANS:
             
         try:
             request = requests.get(url, timeout= 5)
-            print(f"O status do requerimento da url {url} foi: {request.status_code}")
             request.raise_for_status()
             tradutor = BeautifulSoup(request.text, "html.parser")
             return [link.get("href") for link in tradutor.find_all('a') if link.get("href")]
