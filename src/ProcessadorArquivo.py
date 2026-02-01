@@ -105,7 +105,7 @@ class ProcessadorArquivo:
         df_final = pandas.concat(self.dados_consolidados, ignore_index=True)
 
         # Carrega o Cadastro (do link da ANS)
-        df_cad = pandas.read_csv(caminho_cadastro, sep=";", encoding="iso-8859-1")
+        df_cad = pandas.read_csv(caminho_cadastro, sep=";", encoding="iso-8859-1", dtype={"CNPJ":str})
         df_cad.columns = df_cad.columns.str.strip().str.upper()
 
         # Cruzamento de dados (JOIN)
