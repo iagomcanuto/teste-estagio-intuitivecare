@@ -5,39 +5,21 @@ from urllib.parse import urljoin
 from src.Downloader import Downloader
 
 class ColetorANS:
-    def __init__(self, url_base, area_alvo, diretorio):
+    def __init__(self, url_base, area_alvo, diretorio, quantidade_desejada):
         self.url_base = url_base
         self.area_alvo = area_alvo
         self.diretorio = diretorio 
         self.downloader = Downloader(self.diretorio)
+        self.quantidade_desejada = quantidade_desejada
+        self.quantidade_dados = 0
 
     def buscar_dados(self):
-        quantidade_dados = 0
-        quantidade_desejada = 3
         
-        link_alvo = self.requisicao_unica(self.url_base, self.area_alvo)    
-        url_anos = self.requisicao_multipla(link_alvo)        
-        url_anos.reverse()
-        
-    # Selecionar dentro da pagina o ano mais recente usando ordem decrescente do conteudo 
-        
-        for ano in url_anos:
-            if quantidade_dados >= quantidade_desejada:
-                break
-            
-            link_do_ano = self.requisicao_unica(link_alvo, ano)
-            if link_do_ano:
-                arquivos = self.requisicao_multipla(link_do_ano)
-                
-                for arq_link in arquivos:
-                    if "zip" in arq_link.lower():
-                        url_completa = urljoin(link_do_ano, arq_link)
-                        if self.downloader.baixar(url_completa):
-                            quantidade_dados += 1
-                    
-                    if quantidade_dados >= quantidade_desejada:
-                        break
-    # Mexer na resiliencia dessa lógica para para prever diferentes organizações de pastas            
+        link_alvo = self.requisicao_unica(self.url_base, self.area_alvo)
+        if not link_alvo:
+            print("Link nao encontrado")
+            return
+        self.explorar_recursivo(link_alvo)          
         
     def requisicao_unica(self, url, alvo):
         
@@ -82,4 +64,26 @@ class ColetorANS:
             extensoes_alvo = ('.zip', '.csv', '.xlsx', '.rar', '.txt', '.pdf')
             if dado.lower().endswith(extensoes_alvo):
                 self.downloader.baixar(arquivo)
+                
+    def explorar_recursivo(self,url):
+        extensoes_alvo = ('.zip', '.csv', '.xlsx')
+        if self.quantidade_dados >= self.quantidade_desejada:
+            return
         
+        url_elemento = self.requisicao_multipla(url)        
+        url_elemento.reverse()
+        
+    # Selecionar dentro da pagina o elemento mais recente usando ordem decrescente do conteudo 
+        for elemento in url_elemento:
+            if self.quantidade_dados >= self.quantidade_desejada:
+                break
+            
+            link_do_elemento = urljoin(url, elemento)
+            if elemento.endswith('/') or '.' not in elemento:
+                print(f"Entrando na pasta: {elemento}")
+                self.explorar_recursivo(link_do_elemento)
+
+            elif elemento.lower().endswith(extensoes_alvo):
+                print(f"Arquivo ZIP encontrado: {elemento}")
+                if self.downloader.baixar(link_do_elemento):
+                    self.quantidade_dados += 1

@@ -10,7 +10,7 @@ def main():
     
 # 1.1. Acesso à API de Dados Abertos da ANS
 
-    coletor = ColetorANS(url, area, diretorio)
+    coletor = ColetorANS(url, area, diretorio,3)
     coletor.buscar_dados()
     coletor.baixar_dados("https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/")
     extrator = ExtratorArquivo()
