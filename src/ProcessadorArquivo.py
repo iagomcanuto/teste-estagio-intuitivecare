@@ -20,23 +20,27 @@ class ProcessadorArquivo:
     def filtrar_dados(self, caminho:str):
         try:
             if caminho.lower().endswith(".xlsx"):
-                teste = pandas.read_excel(caminho)
+                df = pandas.read_excel(caminho)
             else:
                 # O sep=None tenta detectar se é vírgula ou ponto-e-vírgula sozinho
-                teste = pandas.read_csv(caminho, sep=None, engine="python", encoding="utf-8-sig") 
+                df = pandas.read_csv(caminho, sep=None, engine="python", encoding="utf-8-sig") 
             
-            colunas_texto = teste.select_dtypes(include=["object","string"]).columns
-            termo_busca = "EVENTO|SINISTRO"
-            mask_texto = teste[colunas_texto].apply(
-                lambda col: col.str.contains(termo_busca, case=False, na=False)
-            ).any(axis=1)
-
-            if mask_texto.any():
-                nome = os.path.basename(caminho)
-                dados_normalizados = self.normalizar(teste, nome)
-                self.dados_consolidados.append(dados_normalizados)
+            df.columns = df.columns.str.strip().str.upper().str.replace('"', "")
+            col_codigo = next((c for c in df.columns if "CD_CONTA" in c or "CONTABIL" in c), None)
+            
+            if col_codigo:
+                df[col_codigo] = df[col_codigo].astype(str).str.strip()
+                mask_411 = df[col_codigo].str.startswith('411')
+                
+                if mask_411.any():
+                    df_filtrado = df[mask_411].copy()
+                    nome = os.path.basename(caminho)
+                    dados_normalizados = self.normalizar(df_filtrado, nome)
+                    self.dados_consolidados.append(dados_normalizados)
+                else:
+                    print("Nenhum despesa com evento/sinistro encontrada")
             else:
-                print("Arquivo sem termos de sinistros/eventos.")
+                print("Coluna com codigo contabil nao encontrada")
             
         except Exception as e:
             print(f"Erro ao ler {caminho}: {e}")  
@@ -44,11 +48,10 @@ class ProcessadorArquivo:
     def normalizar(self, df: pandas.DataFrame, nome_original):
 
         try:
-            # 1. Limpeza de colunas
-            df.columns = df.columns.str.strip().str.upper().str.replace('"', "")
+            # Limpeza de colunas
             df = df.loc[:, ~df.columns.duplicated()].copy()
 
-            # 2. Mapeamento para normalização 
+            # Mapeamento para normalização 
             mapeamento = {}
             for col in df.columns:
                 if "DATA" in col or "DT_" in col: mapeamento[col] = "DATA_BASE"
@@ -60,7 +63,7 @@ class ProcessadorArquivo:
 
             df = df.rename(columns=mapeamento)
 
-            # 3 Conversão Numérica
+            # Conversão Numérica
             for v_col in ["V_INICIAL", "V_FINAL"]:
                 if v_col in df.columns:
                     # Remove pontos de milhar, troca vírgula por ponto e converte
@@ -69,7 +72,7 @@ class ProcessadorArquivo:
                         errors="coerce"
                     ).fillna(0)
                     
-            # 4 Filtro para a contabilidade não contar duplicado 
+            # Filtro para a contabilidade não contar duplicado 
             
             df['CODIGO_CONTABIL'] = df['CODIGO_CONTABIL'].astype(str).str.strip()
             df = df.sort_values('CODIGO_CONTABIL').reset_index(drop=True)
@@ -79,7 +82,7 @@ class ProcessadorArquivo:
             is_leaf = [not (i + 1 < len(codes) and codes[i+1].startswith(codes[i])) for i in range(len(codes))]
             df = df[is_leaf].copy()
             
-            # 5. Cálculo e Filtro Final
+            # Cálculo e Filtro Final
             if "V_FINAL" in df.columns and "V_INICIAL" in df.columns:
                 df["VALOR_DESPESAS"] = df["V_FINAL"] - df["V_INICIAL"]
                 df_final = df[df["VALOR_DESPESAS"] > 0].copy()
@@ -105,6 +108,7 @@ class ProcessadorArquivo:
         except Exception as e:
             print(f" Falha na normalização: {e}")
             return None
+        
     def consolidar_e_salvar(self, caminho_cadastro):
         if not self.dados_consolidados:
             print(" Nenhum dado para consolidar.")
@@ -126,11 +130,38 @@ class ProcessadorArquivo:
             how="left"
         )
 
-        
+        # Evitar duplicados
+        df_cad_extra = df_cad[["CNPJ", "MODALIDADE", "UF"]].drop_duplicates(subset="CNPJ")
+        # Segundo join por CNPJ 
+        df_final = pandas.merge(
+            df_final, 
+            df_cad_extra, 
+            on="CNPJ", 
+            how="left"
+        )
+
+        # Renomeia a coluna para bater com o requisito exato
+        df_final = df_final.rename(columns={"REGISTRO_OPERADORA": "RegistroANS"})
+
+
         #  Criando Ano e Trimestre a partir da DATA_BASE
-        df_final["DATA_BASE"] = pandas.to_datetime(df_final["DATA_BASE"], errors="coerce")
+        df_final["DATA_BASE_TEMP"] = pandas.to_datetime(df_final["DATA_BASE"], errors="coerce")
+        
+        # Separando os erros para não perder dados depois do tratamento 
+        mask_data_valida = df_final["DATA_BASE_TEMP"].notna()
+        df_data_invalida = df_final[~mask_data_valida].copy()
+        df_final = df_final[mask_data_valida].copy()
+        
+        df_final["DATA_BASE"] = df_final["DATA_BASE_TEMP"]
         df_final["Ano"] = df_final["DATA_BASE"].dt.year
         df_final["Trimestre"] = df_final["DATA_BASE"].dt.quarter
+        df_final = df_final.drop(columns=["DATA_BASE_TEMP"])
+        
+        # Caso existam, dados invalidos serão separados em um log
+        if not df_data_invalida.empty:
+            log_path = os.path.join(self.saida, "log_datas_invalidas.csv")
+            df_data_invalida.to_csv(log_path, index=False, sep=";", encoding="utf-8-sig")
+            print(f" {len(df_data_invalida)} linhas com data inválida movidas para log.")
 
         # Renomeando para bater com o requisito exato
         df_final = df_final.rename(columns={
@@ -139,7 +170,7 @@ class ProcessadorArquivo:
         })
         # Agrupar por CNPJ, Ano e Trimestre. 
         # Soma o ValorDespesas e pega a "primeira" RazaoSocial que encontrar
-        df_agrupado = df_final.groupby(["CNPJ", "Ano", "Trimestre"]).agg({
+        df_agrupado = df_final.groupby(["CNPJ", "Ano", "Trimestre", "RegistroANS", "MODALIDADE", "UF"]).agg({
             "ValorDespesas": "sum",
             "RazaoSocial": "first" # Resolve o problema de CNPJ com nomes diferentes
         }).reset_index()
@@ -147,7 +178,7 @@ class ProcessadorArquivo:
         df_agrupado["ValorDespesas"] = df_agrupado["ValorDespesas"].round(2)
         
         # Seleciona colunas finais na ordem do requisito
-        colunas_1_3 = ["CNPJ", "RazaoSocial", "Trimestre", "Ano", "ValorDespesas"]
+        colunas_1_3 = ["CNPJ", "RazaoSocial", "Trimestre", "Ano", "ValorDespesas", "RegistroANS", "MODALIDADE", "UF"]
         df_saida = df_agrupado[colunas_1_3]
 
         #  Salva CSV e Compacta em ZIP
@@ -162,3 +193,30 @@ class ProcessadorArquivo:
             zipf.write(csv_path, arcname="consolidado_despesas.csv")
         
         print(f" CONSOLIDADO COM SUCESSO: {zip_path}")
+        
+    def gerar_despesas_agregadas(self, df_input:pandas.DataFrame):
+        # Agrupamento principal por Operadora e UF
+        # Como o df_input já está no nível de trimestres, 
+        # a média aqui será automaticamente a 'Média por Trimestre'
+        df_agregado = df_input.groupby(['RazaoSocial', 'UF']).agg({
+            'ValorDespesas': ['sum', 'mean', 'std']
+        }).reset_index()
+        df_agregado.columns = [
+            'RazaoSocial', 'UF', 'Total_Despesas', 
+            'Media_Trimestral', 'Desvio_Padrao_Despesas'
+        ]
+        # Tratamento desvio padrão NaN
+        # Se a operadora só tiver 1 trimestre, o desvio padrão é 0 (ou NaN)
+        df_agregado['Desvio_Padrao_Despesas'] = df_agregado['Desvio_Padrao_Despesas'].fillna(0)
+        # Ordenação in memory
+        # Ordenar do maior Valor Total para o menor
+        df_agregado = df_agregado.round(2)
+        df_agregado = df_agregado.sort_values(by='Total_Despesas', ascending=False)
+        caminho_csv = os.path.join(self.saida, "despesas_agregadas.csv")
+        df_agregado.to_csv(caminho_csv, index=False, sep=";", encoding="utf-8-sig")
+        # Compactação 
+        nome_zip = "Teste_Iago_Meneses_Canuto.zip" 
+        zip_path = os.path.join(self.saida, nome_zip)
+        with zipfile.ZipFile(zip_path, "w") as zipf:
+            zipf.write(caminho_csv, arcname="despesas_agregadas.csv")
+        return df_agregado  

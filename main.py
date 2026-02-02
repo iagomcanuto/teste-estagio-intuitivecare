@@ -31,7 +31,8 @@ def main():
 #2.1. Validação de Dados com Estratégias Diferentes
 
     validador = Validador(caminho_consolidado="data/output/consolidado_despesas.csv", pasta_saida="data/output")
-    validador.executar_limpeza()
+    df_final = validador.executar_limpeza()
+    processador.gerar_despesas_agregadas(df_final)
     
 if __name__ == "__main__":
     main()
