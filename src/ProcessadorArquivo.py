@@ -77,10 +77,29 @@ class ProcessadorArquivo:
             df['CODIGO_CONTABIL'] = df['CODIGO_CONTABIL'].astype(str).str.strip()
             df = df.sort_values('CODIGO_CONTABIL').reset_index(drop=True)
             
-            # Algoritmo: Se o próximo código na lista começar com o atual, o atual é PAI (totalizador)
-            codes = df['CODIGO_CONTABIL'].tolist()
-            is_leaf = [not (i + 1 < len(codes) and codes[i+1].startswith(codes[i])) for i in range(len(codes))]
-            df = df[is_leaf].copy()
+            
+            df["CODIGO_CONTABIL"] = df["CODIGO_CONTABIL"].astype(str).str.strip()
+            df = df.sort_values("CODIGO_CONTABIL").reset_index(drop=True)
+            
+            def obter_apenas_folhas(grupo:pandas.DataFrame):
+                # Ordena as contas daquela operadora específica
+                
+                grupo = grupo.sort_values("CODIGO_CONTABIL")
+                codes = grupo["CODIGO_CONTABIL"].astype(str).tolist()
+
+                # Identifica se a próxima conta começa com a atual (se sim, a atual é "Pai")
+                is_leaf = [
+                    not (i + 1 < len(codes) and codes[i+1].startswith(codes[i])) 
+                    for i in range(len(codes))
+                ]
+                return grupo[is_leaf]
+
+            # Isso impede que uma operadora apague os dados da outra
+            
+            col_reg = next((c for c in df.columns if "REG_ANS" in c or "REGISTRO" in c), 'REG_ANS')
+            df = df.groupby(col_reg, group_keys=True).apply(obter_apenas_folhas).reset_index()
+            
+            
             
             # Cálculo e Filtro Final
             if "V_FINAL" in df.columns and "V_INICIAL" in df.columns:
