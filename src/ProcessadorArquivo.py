@@ -74,10 +74,6 @@ class ProcessadorArquivo:
                     
             # Filtro para a contabilidade não contar duplicado 
             
-            df['CODIGO_CONTABIL'] = df['CODIGO_CONTABIL'].astype(str).str.strip()
-            df = df.sort_values('CODIGO_CONTABIL').reset_index(drop=True)
-            
-            
             df["CODIGO_CONTABIL"] = df["CODIGO_CONTABIL"].astype(str).str.strip()
             df = df.sort_values("CODIGO_CONTABIL").reset_index(drop=True)
             
@@ -104,7 +100,7 @@ class ProcessadorArquivo:
             # Cálculo e Filtro Final
             if "V_FINAL" in df.columns and "V_INICIAL" in df.columns:
                 df["VALOR_DESPESAS"] = df["V_FINAL"] - df["V_INICIAL"]
-                df_final = df[df["VALOR_DESPESAS"] > 0].copy()
+                df_final = df[df["VALOR_DESPESAS"] != 0].copy()
                 
                 cols_finais = [
                     "REGISTRO_OPERADORA", "DATA_BASE", "CODIGO_CONTABIL", 
@@ -139,7 +135,7 @@ class ProcessadorArquivo:
         # Carrega o Cadastro (do link da ANS)
         df_cad = pandas.read_csv(caminho_cadastro, sep=";", encoding="utf-8-sig", dtype={"CNPJ":str})
         df_cad.columns = df_cad.columns.str.strip().str.upper()
-
+    
         # Cruzamento de dados (JOIN)
         df_final = pandas.merge(
             df_final, 
@@ -193,6 +189,10 @@ class ProcessadorArquivo:
             "ValorDespesas": "sum",
             "RazaoSocial": "first" # Resolve o problema de CNPJ com nomes diferentes
         }).reset_index()
+        
+        # Agora que a soma já foi feita (e os estornos descontados), 
+        # Limpar quem ficou com saldo negativo ou zerado do relatório final.
+        df_agrupado = df_agrupado[df_agrupado["ValorDespesas"] > 0].copy()
 
         df_agrupado["ValorDespesas"] = df_agrupado["ValorDespesas"].round(2)
         

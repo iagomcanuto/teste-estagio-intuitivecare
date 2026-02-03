@@ -23,7 +23,7 @@ Este repositório contém a minha solução para o teste de nivelamento da selet
 
     - Trade-off
 
-        Decidi processar os arquivos in-memory (em memória). Como a quantidade de dados brutos é baixa (por volta de 300MB) e, depois de filtrados, o volume se torna ainda menor, não identifiquei necessidade de processamento incremental, levando em consideração o desempenho dos equipamentos atuais.
+        Durante o processamento, mantive os valores negativos (estornos e glosas) para garantir a integridade contábil, permitindo que lançamentos errados de entrada fossem devidamente anulados por seus estornos de saída (resolvendo casos de "wash trades"). Decidi processar os arquivos in-memory (em memória). Como a quantidade de dados brutos é baixa (por volta de 300MB) e, depois de filtrados, o volume se torna ainda menor, não identifiquei necessidade de processamento incremental, levando em consideração o desempenho dos equipamentos atuais.
 
 - Consolidação e Análise de inconsistências (1.3)
 
@@ -31,13 +31,13 @@ Este repositório contém a minha solução para o teste de nivelamento da selet
 
     - Trade-off
 
-        Decidi descartar da planilha empresas que não apresentaram despesas (valores zerados ou negativos). Em casos de razões sociais diferentes para o mesmo CNPJ, optei por manter a primeira razão social encontrada. Para o tratamento de datas, utilizei a biblioteca Pandas para normalização automática; caso alguma data seja inválida ou o processamento falhe, o sistema gera um log de erros contendo esses registros. 
+        Decidi descartar da planilha empresas que não apresentaram despesas (saldos finais zerados ou negativos). Em casos de razões sociais diferentes para o mesmo CNPJ, optei por manter a primeira razão social encontrada. Para o tratamento de datas, utilizei a biblioteca Pandas para normalização automática; caso alguma data seja inválida ou o processamento falhe, o sistema gera um log de erros contendo esses registros. 
 
 ## Teste de transformação e validação de dados
 
 - Validação de dados e estratégias (2.1)
 
-    Para validar os dados, utilizei uma classe específica que identifica registros inválidos e realiza a limpeza. Implementei verificações para validar o CNPJ (conferindo tanto o formato quanto os dígitos verificadores), garantir que os valores fossem positivos e que nenhuma Razão Social estivesse em branco. O código também realiza o tratamento de valores negativos durante a etapa de normalização. 
+    Para validar os dados, utilizei uma classe específica que identifica registros inválidos e realiza a limpeza. Implementei verificações para validar o CNPJ (conferindo tanto o formato quanto os dígitos verificadores), garantir que os valores fossem positivos e que nenhuma Razão Social estivesse em branco. O código também realiza o tratamento de valores negativos durante a etapa de consolidação. 
 
     - Trade-off
 
