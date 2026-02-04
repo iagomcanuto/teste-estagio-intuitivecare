@@ -255,3 +255,21 @@ Importação: Execute sql/query_import.sql seguindo a ordem: Cadastro de Operado
     | UNIMED NOVA FRIBURGO-SOC.COOP.SERV.MED.HOSP.LTDA. | 2 | R$ 201.077.432,91 |
 
     </details>
+
+## Teste de API e Interface Web
+    
+   - **Backend (FastAPI + PostgreSQL)**
+
+Framework: Utilizei o FastAPI pela alta performance e geração automática de documentação OpenAPI (Swagger), o que agiliza o ciclo de desenvolvimento e testes.
+    
+Paginação: Implementada via Offset-based (limit e page), estratégia ideal para a navegação de dados tabulares da ANS.
+
+Estatísticas: As agregações (Top 5 operadoras, totais e médias) são processadas via Query Direta na View SQL vw_despesas_estatisticas, garantindo que os dados estejam sempre atualizados com o banco.
+
+Estrutura de Resposta: Adotei a Opção B (Dados + Metadados) para facilitar o controle de paginação pelo frontend.
+
+Interface Web (Vue.js)
+Devido ao tempo dedicado a garantir a qualidade técnica do processamento dos dados da ANS, a interface Vue.js não foi implementada nesta entrega.
+
+Documentação
+A coleção do Postman para teste das rotas está disponível na raiz: IntuitiveCare_API.postman_collection.json.

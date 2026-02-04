@@ -1,0 +1,73 @@
+{
+	"info": {
+		"name": "IntuitiveCare_API_Iago",
+		"description": "Coleção de testes para a API da IntuitiveCare - Etapa 4 do teste técnico.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Listar Operadoras (Paginado)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/operadoras?page=1&limit=10",
+					"protocol": "http",
+					"host": ["127", "0", "0", "1"],
+					"port": "8000",
+					"path": ["api", "operadoras"],
+					"query": [
+						{ "key": "page", "value": "1" },
+						{ "key": "limit", "value": "10" }
+					]
+				},
+				"description": "Retorna a lista de operadoras com metadados de paginação."
+			}
+		},
+		{
+			"name": "2. Detalhes da Operadora (CNPJ)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/operadoras/00000000000000",
+					"protocol": "http",
+					"host": ["127", "0", "0", "1"],
+					"port": "8000",
+					"path": ["api", "operadoras", "00000000000000"]
+				},
+				"description": "Retorna os detalhes cadastrais de uma operadora específica via CNPJ."
+			}
+		},
+		{
+			"name": "3. Histórico de Despesas",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/operadoras/00000000000000/despesas",
+					"protocol": "http",
+					"host": ["127", "0", "0", "1"],
+					"port": "8000",
+					"path": ["api", "operadoras", "00000000000000", "despesas"]
+				},
+				"description": "Retorna o histórico de despesas consolidadas de uma operadora."
+			}
+		},
+		{
+			"name": "4. Estatísticas Agregadas",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/estatisticas",
+					"protocol": "http",
+					"host": ["127", "0", "0", "1"],
+					"port": "8000",
+					"path": ["api", "estatisticas"]
+				},
+				"description": "Retorna o Top 5 operadoras com maiores despesas e métricas gerais."
+			}
+		}
+	]
+}
